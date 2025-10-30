@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-5.1-mini",
+        model: "gpt-4o-mini",
         stream: true,
         input: [
           { role: "system", content: sys },
