@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang='ko'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>AI 체험소설 v15f</title>
+<body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif;margin:0;background:#0a0f1a;color:#f8fafc">
+<div style="max-width:900px;margin:40px auto;padding:16px;border:1px solid #334155;border-radius:16px;background:#0f172a">
+  <h1 style="margin:0 0 12px 0">AI 체험소설 — v15f</h1>
+  <p style="color:#cbd5e1">아래 4개의 질문에 답하고 “소설 생성”을 누르면, 오른쪽 박스에 한 줄씩 써지는 과정을 볼 수 있어요. 끝나면 표지 그림도 자동 생성됩니다.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <label>주제</label>
+      <input id="topic" style="width:100%;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1320;color:#f8fafc" placeholder="예: 미술관 관람" />
+      <div style="margin-top:10px;color:#cbd5e1">질문들</div>
+      <input id="q1" placeholder="무엇을 보거나 만들었나요?" style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1320;color:#f8fafc">
+      <input id="q2" placeholder="누구와 함께 했나요?" style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1320;color:#f8fafc">
+      <input id="q3" placeholder="가장 재미있었던 순간은 무엇이었나요?" style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1320;color:#f8fafc">
+      <input id="q4" placeholder="돌아올 때 마음은 어땠나요?" style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1320;color:#f8fafc">
+      <button id="go" style="margin-top:10px;padding:10px 14px;border-radius:10px;border:none;background:#8b5cf6;color:#fff;font-weight:800">소설 생성</button>
+    </div>
+    <div>
+      <div id="story" style="min-height:240px;border:1px dashed #3b475a;border-radius:12px;background:#0b1320;padding:16px;white-space:pre-wrap;line-height:1.8"></div>
+      <div id="cover" style="margin-top:10px;display:grid;place-items:center;min-height:200px;border:1px dashed #3b475a;border-radius:12px;background:#0b1320;color:#cbd5e1">표지는 소설 생성 후 자동으로 만들어집니다.</div>
+    </div>
+  </div>
+</div>
+<script>
+async function callStory(topic, answers, onChunk){
+  const res = await fetch('/api/story',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,answers})});
+  const reader = res.body.getReader(); const dec = new TextDecoder('utf-8'); let buf='';
+  while(true){ const {value,done}=await reader.read(); if(done) break;
+    buf += dec.decode(value,{stream:true}); const lines = buf.split('\n');
+    for(const line of lines){ if(line.startsWith('data: ')){
+        const s=line.slice(6).trim(); if(s==='[DONE]') continue; try{ const j=JSON.parse(s); onChunk(j.output_text||j.delta||''); }catch{}
+    }}
+    buf = lines[lines.length-1].startsWith('data: ')?'':lines[lines.length-1];
+  }
+}
+async function callCover(topic){
+  const r = await fetch('/api/cover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,keywords:[]})});
+  const j = await r.json(); const b64=j.b64;
+  const box=document.getElementById('cover'); box.innerHTML='';
+  if(!b64){ box.textContent='표지 생성 실패'; return;}
+  const img=new Image(); img.src='data:image/png;base64,'+b64; img.style.maxWidth='100%'; img.style.borderRadius='12px'; box.appendChild(img);
+}
+document.getElementById('go').onclick=async()=>{
+  const topic=document.getElementById('topic').value||'자유 주제';
+  const answers=[1,2,3,4].map(i=>document.getElementById('q'+i).value||'');
+  const out=document.getElementById('story'); out.textContent='　';
+  await callStory(topic, answers, (t)=>{ out.textContent += t; out.scrollTop=out.scrollHeight; });
+  await callCover(topic);
+};
+</script>
+</body></html>
