@@ -25,6 +25,10 @@
 
     <div class="card">
       <h2>1) 나의 경험 입력</h2>
+
+      <label>주인공 이름</label>
+      <input id="heroName" placeholder="예) 지우, 민준, 수아 등" />
+
       <label>가장 인상 깊었던 경험</label>
       <textarea id="experience" placeholder="예) 가족 여행에서 길을 잃었던 일..."></textarea>
 
@@ -71,6 +75,7 @@
 
       function payloadFromInputs() {
         return {
+          heroName: qs('heroName').value.trim(),
           experience: qs('experience').value.trim(),
           emotion: qs('emotion').value.trim(),
           whenWhere: qs('whenWhere').value.trim(),
@@ -106,7 +111,7 @@
       });
 
       btnClear.addEventListener('click', () => {
-        ['experience','emotion','whenWhere','inciting','conflict','resolution','email'].forEach(id => qs(id).value = '');
+        ['heroName','experience','emotion','whenWhere','inciting','conflict','resolution','email'].forEach(id => qs(id).value = '');
         resultBox.textContent = '';
         resultBox.style.display = 'none';
         qs('send-status').textContent = '';
