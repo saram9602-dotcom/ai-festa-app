@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vercel dev",
-    "build": "echo 'static build not required'",
+    "build": "echo \"static build not required\"",
     "start": "vercel dev"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.22.0",   // ✅ 업그레이드
+    "@google/generative-ai": "^0.22.0",
     "nodemailer": "^6.9.15"
   }
 }
