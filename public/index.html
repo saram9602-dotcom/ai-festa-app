@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI 소설 체험 부스</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 920px; margin: 32px auto; padding: 0 16px; }
+      h1 { margin: 0 0 12px; }
+      .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+      label { display:block; font-weight:600; margin:16px 0 8px; }
+      input, textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; font-size: 16px; }
+      textarea { min-height: 88px; }
+      button { margin-top: 16px; padding: 12px 16px; border: 0; border-radius: 12px; font-weight: 700; cursor: pointer; }
+      .primary { background: #111827; color: white; }
+      .ghost { background: #f3f4f6; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .result { white-space: pre-wrap; background: #f9fafb; border-radius: 12px; padding: 12px; margin-top: 12px; border: 1px dashed #e5e7eb; }
+      .hint { color: #6b7280; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>🚀 AI와 함께 '인생 경험' 소설로 만들기</h1>
+    <p class="hint">활동 순서: 경험 입력 → <b>소설 줄거리 자동 생성</b> → 이메일로 결과 받기(선택)</p>
+
+    <div class="card">
+      <h2>1) 나의 경험 입력</h2>
+      <label>가장 인상 깊었던 경험</label>
+      <textarea id="experience" placeholder="예) 가족 여행에서 길을 잃었던 일..."></textarea>
+
+      <div class="row">
+        <div>
+          <label>그때 가장 강했던 감정</label>
+          <input id="emotion" placeholder="예) 두려움, 뿌듯함 등" />
+        </div>
+        <div>
+          <label>언제/어디서</label>
+          <input id="whenWhere" placeholder="예) 여름방학, 강릉 해변" />
+        </div>
+      </div>
+
+      <label>시작 계기(발단)</label>
+      <input id="inciting" placeholder="예) 신기한 물건을 발견했다" />
+
+      <label>가장 큰 문제(갈등)</label>
+      <input id="conflict" placeholder="예) 친구가 사라졌다" />
+
+      <label>어떻게 해결했나요?</label>
+      <input id="resolution" placeholder="예) 침착하게 주변을 탐색하고 어른에게 도움을 요청했다" />
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="btn-generate" class="primary">소설 줄거리 생성</button>
+        <button id="btn-clear" class="ghost" type="button">입력 지우기</button>
+      </div>
+
+      <div id="result" class="result" style="display:none;"></div>
+
+      <h3 style="margin-top:24px;">2) 이메일로 결과 받기(선택)</h3>
+      <label>받는 이메일 주소</label>
+      <input id="email" type="email" placeholder="예) student@example.com" />
+      <button id="btn-send" class="ghost" type="button">이메일로 보내기</button>
+      <div id="send-status" class="hint" style="margin-top:8px;"></div>
+    </div>
+
+    <script>
+      const qs = (id) => document.getElementById(id);
+      const btnGenerate = qs('btn-generate');
+      const btnClear = qs('btn-clear');
+      const btnSend = qs('btn-send');
+      const resultBox = qs('result');
+
+      function payloadFromInputs() {
+        return {
+          experience: qs('experience').value.trim(),
+          emotion: qs('emotion').value.trim(),
+          whenWhere: qs('whenWhere').value.trim(),
+          inciting: qs('inciting').value.trim(),
+          conflict: qs('conflict').value.trim(),
+          resolution: qs('resolution').value.trim(),
+          email: qs('email').value.trim() || null,
+        };
+      }
+
+      async function callApi(mode, extra = {}) {
+        const res = await fetch('/api/processStory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode, ...payloadFromInputs(), ...extra })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+      }
+
+      btnGenerate.addEventListener('click', async () => {
+        const data = payloadFromInputs();
+        if (!data.experience) { alert('가장 인상 깊었던 경험을 입력해 주세요.'); return; }
+        resultBox.style.display = 'block';
+        resultBox.textContent = '생성 중...';
+        try {
+          const json = await callApi('generate');
+          resultBox.textContent = json.story || '(결과 없음)';
+        } catch (err) {
+          console.error(err);
+          resultBox.textContent = '오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+        }
+      });
+
+      btnClear.addEventListener('click', () => {
+        ['experience','emotion','whenWhere','inciting','conflict','resolution','email'].forEach(id => qs(id).value = '');
+        resultBox.textContent = '';
+        resultBox.style.display = 'none';
+        qs('send-status').textContent = '';
+      });
+
+      btnSend.addEventListener('click', async () => {
+        const data = payloadFromInputs();
+        if (!resultBox.textContent) { alert('먼저 소설 줄거리를 생성해 주세요.'); return; }
+        if (!data.email) { alert('받는 이메일 주소를 입력해 주세요.'); return; }
+        qs('send-status').textContent = '이메일 전송 중...';
+        try {
+          const json = await callApi('send', { story: resultBox.textContent });
+          qs('send-status').textContent = json.ok ? '이메일이 전송되었습니다.' : '전송 실패';
+        } catch (err) {
+          console.error(err);
+          qs('send-status').textContent = '오류가 발생했습니다. 이메일 주소를 확인하고 다시 시도해 주세요.';
+        }
+      });
+    </script>
+  </body>
+</html>
